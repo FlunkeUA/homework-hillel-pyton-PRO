@@ -1,17 +1,33 @@
-# This is a sample Python script.
-
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+from pydantic import BaseModel
+from abc import ABC, abstractmethod
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+class PublicationModel(BaseModel):
+    title: str
+    author: str
+    year: int
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+class BookModel(BaseModel):
+    pass
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
 
+class JournalModel(BookModel):
+    month: int
+
+
+class AbstractPublication(ABC):
+    @abstractmethod
+    def display_info(self):
+        raise NotImplementedError
+
+
+class Book:
+    def __init__(self, model: BookModel):
+        self._model = model
+
+    def __str__(self):
+        return f'{self._model.titel} + {self._model.author} + {self._model.year}'
+
+    def display_info(self):
+        return str(self)
