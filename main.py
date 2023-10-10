@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import List
 from abc import ABC, abstractmethod
+from collections import defaultdict
 
 
 # Абстрактний клас
@@ -39,45 +40,13 @@ class Magazine(PublicModel):
         return f"Title: {self.title}, Author: {self.author}, Year: {self.year}"
 
 
-# Клас бібліотеки
-class Library:
-    def __init__(self):
-        self.books = set()
-        print("Бібліотека створена")
-
-    # Додавання книги в бібліотеку
-    def add_book(self, book):
-        if book not in self.books:
-            self.books.add(book)
-            print(f"Додана книга: {book.title}")
-        else:
-            print(f"Книга {book.title} вже існує у бібліотеці.")
-
-    # Видалення книги з бібліотеки
-    def remove_book(self, book):
-        if book in self.books:
-            self.books.remove(book)
-            print(f"Видалена книга: {book.title}")
-        else:
-            print(f"Книга {book.title} не знайдена у бібліотеці.")
-
-    # Ітератор для проходження по всіх книгах
-    def __iter__(self):
-        return iter(self.books)
-
-    # Генератор, який повертає книги за ім'ям автора
-    def books_by_author(self, author_name):
-        for __book in self.books:
-            if book.author == author_name:
-                yield book
-
-
 # Декоратор для логування при додаванні нової книги до бібліотеки
 def log_addition(func):
     def wrapper(*args, **kwargs):
         _book = args[1]
-        print(f"Додаємо книгу: {book.title} (Автор: {book.author})")
+        print(f"Додаємо {_book.title}, (Автор: {_book.author})")
         return func(*args, **kwargs)
+
     return wrapper
 
 
@@ -89,7 +58,55 @@ def check_book_existence(func):
             return func(*args, **kwargs)
         else:
             print(f"Книга {book.title} вже в бібліотеці.")
+
     return wrapper
+
+
+# Клас бібліотеки
+class Library:
+    def __init__(self):
+        self.books = set()
+        self.books_by_author = defaultdict(list)
+        print("Бібліотека створена")
+
+    @log_addition
+    def add_book(self, book):
+        if book not in self.books:
+            self.books.add(book)
+            self.books_by_author[book.author].append(book)
+
+    @check_book_existence
+    def remove_book(self, book):
+        if book in self.books:
+            self.books.remove(book)
+
+    def __iter__(self):
+        return iter(self.books)
+
+    def books_by_author(self, author_name):
+        return self.books_by_author[author_name]
+
+    def print_books_by_author(self, author_name):
+        books = self.books_by_author.get(author_name, [])
+        if books:
+            for book in books:
+                print(book.book_info())
+        else:
+            print(f"No books found for author {author_name}.")
+
+    def save_to_file(self, file_path):
+        with open(file_path, 'w') as file:
+            for book in self.books:
+                file.write(f"{book.title}, {book.author}, {book.year}\n")
+
+    def load_from_file(self, file_path):
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+            for line in lines:
+                book_info = line.strip().split(", ")
+                book_model = BookModel(title=book_info[0], author=book_info[1], year=int(book_info[2]))
+                new_book = Book(book_model)
+                self.add_book(new_book)
 
 
 # Контекстний менеджер для роботи з файлами
@@ -126,19 +143,16 @@ if __name__ == "__main__":
     library.add_book(journal1)
 
     # Виведення списку книг у бібліотеці
-    print("Список книг у бібліотеці:")
+    print("\nСписок книг у бібліотеці:")
     for book in library:
         print(book.book_info())
 
-    # Виведення списку книг бібліотеки по імені автора
-    print("\nСписок книг у бібліотеці за автором Хэл Элрод:")
-    for book in library.books_by_author("Хэл Элрод"):
-        print(book.book_info())
+    # Виведення книг за певним автором
+    print("\nСписок книг у бібліотеці - автор Хэл Элрод:")
+    library.print_books_by_author("Хэл Элрод")
 
-    # Збереження списку книг у файл
-    with FileManager("books.txt") as file:
-        for book in library:
-            file.write(f"{book.title}, {book.author}, {book.year}\n")
+    # Сохранение списка книг в файл
+    library.save_to_file("books.txt")
 
     # Видалення книги з бібліотеки
     library.remove_book(book1)
@@ -149,13 +163,8 @@ if __name__ == "__main__":
         print(book.book_info())
 
     # Додавання книг з файлу в бібліотеку
-    with open("books.txt", 'r') as file:
-        lines = file.readlines()
-        for line in lines:
-            book_info = line.strip().split(", ")
-            book_model = BookModel(title=book_info[0], author=book_info[1], year=int(book_info[2]))
-            new_book = Book(book_model)
-            library.add_book(new_book)
+    print('\nДодаемо з файлу')
+    library.load_from_file("books.txt")
 
     # Виведення списку книг бібліотеки після додавання
     print("\nСписок книг у бібліотеці після додавання з файлу:")
